@@ -7,10 +7,12 @@ PN532_I2C pn532_i2c(Wire);
 NfcAdapter nfc = NfcAdapter(pn532_i2c);
 
 String tagId = "None";
+byte payload[20];
+String payload_str;
 byte nuidPICC[4];
 
 void setup(void) {
- 	Serial.begin(115200);
+  Serial.begin(115200);
   Serial.println("Start setup");
 
  	nfc.begin();
@@ -22,12 +24,15 @@ void loop() {
 }
 
 void readNFC() {
- 	if (nfc.tagPresent())
+ 	if (nfc.tagPresent()) // blocking
  	{
- 			NfcTag tag = nfc.read();
- 			tag.print();
- 			tagId = tag.getUidString();
+ 	  NfcTag tag = nfc.read();
+      tag.getNdefMessage().getRecord(0).getPayload(payload);
+      payload_str = String((char*)payload);
+      Serial.println(payload_str);
+
+      delay(1000);
  	}
- 	delay(5000);
+ 	
 }
 
