@@ -10,13 +10,15 @@
 char ssid[] = SECRET_SSID;
 char pass[] = SECRET_PASS;
 
+PN532_I2C pn532_i2c(Wire);
+NfcAdapter nfc = NfcAdapter(pn532_i2c);
 String tagId = "None";
 byte payload[20];
 String payload_str;
 byte nuidPICC[4];
 
 int status = WL_IDLE_STATUS;
-IPAddress server_ip(192,168,214,87);  // numeric IP
+IPAddress server_ip(192,168,222,86);  // numeric IP
 int server_port = 80; // port 80 is the default for HTTP
 
 WiFiClient client;
@@ -24,7 +26,10 @@ WiFiClient client;
 void setup() {
   //Initialize serial and wait for port to open:
   Serial.begin(115200);
+  pinMode(LED_BUILTIN, OUTPUT);
   Serial.println("Start setup");
+  
+  digitalWrite(LED_BUILTIN, HIGH);
 
   // check for the WiFi module:
   if (WiFi.status() == WL_NO_MODULE) {
@@ -46,22 +51,21 @@ void setup() {
     status = WiFi.begin(ssid, pass);
 
     // wait 10 seconds for connection:
-    delay(10000);
+    delay(5000);
   }
 
-  printWifiStatus();
+  print_wifi_status();
   Serial.println("Wifi initialized");
   nfc.begin();
   Serial.println("NFC initialized");
+  digitalWrite(LED_BUILTIN, LOW);
 }
 
 void loop() {
-  post_request();
-  read_response();
-  delay(5000);
+  read_and_send_NFC();
 }
 
-void printWifiStatus() {
+void print_wifi_status() {
   // print the SSID of the network you're attached to:
   Serial.print("SSID: ");
   Serial.println(WiFi.SSID());
@@ -77,6 +81,7 @@ void printWifiStatus() {
   Serial.print(rssi);
   Serial.println(" dBm");
 }
+
 
 void read_response() {
   if(client.available()){
@@ -98,21 +103,26 @@ void post_request() {
 
   Serial.println("connected to server");
   // Make a HTTP request:
-  client.println("GET / HTTP/1.1");
-  client.println("Host: 192.168.214.87");//IP once again
+  client.print("POST /sensor-reading?reading=");
+  client.print(payload_str.substring(14));
+  client.println(" HTTP/1.1");
+  client.println("Host: 192.168.222.86");//IP once again
+  client.println("accept: application/json");
   client.println("Connection: close");
   client.println();
   delay(100);//wait a little at least
 }
 
-void readNFC() {
+
+void read_and_send_NFC() {
  	if (nfc.tagPresent()) // blocking
  	{
  	  NfcTag tag = nfc.read();
       tag.getNdefMessage().getRecord(0).getPayload(payload);
       payload_str = String((char*)payload);
       Serial.println(payload_str);
-
+      post_request();
+      //read_response();
       delay(1000);
  	}
 
