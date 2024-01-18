@@ -17,7 +17,6 @@ app.add_middleware(
     allow_headers=["*"],  # Adjust this to restrict headers if needed
 )
 START_SENSOR_NUMBER = 0
-NUMBER_OF_SENSORS = 6
 
 @app.get("/race-time")
 async def race_time(race_number: Optional[int] = None):
@@ -80,13 +79,23 @@ async def sensor_reading(reading: str):
 
     memory = await get_memory()
     if memory["in_progress"]:
-        print("1")
         await add_reading_to_race(data_row)
         race_finished = await handle_race_logic()
         if race_finished:
             return {"message": "ok"}
 
     await add_sensor_data_to_history(data_row)
+    return {"message": "ok"}
+
+
+@app.post("/set-checkpoint-number")
+async def set_checkpoint_number(num_of_checkpoints: int):
+    memory = await get_memory()
+    if num_of_checkpoints > memory['num_sensors']:
+        raise fastapi.HTTPException(status_code=400, detail=f"Number of checkpoints cannot be greater than {memory['num_sensors']}")
+
+    memory['num_checkpoints'] = num_of_checkpoints
+    await write_memory(memory)
     return {"message": "ok"}
 
 
@@ -101,7 +110,9 @@ async def handle_race_logic() -> bool:
     current_checkpoint_number = None
     checkpoints = [int(row[1]) for row in race_history[1:]]
     # the race was for sure not completed
-    if not checkpoints.count(START_SENSOR_NUMBER) >=2 and len(checkpoints) < NUMBER_OF_SENSORS + 1:
+    if not checkpoints.count(START_SENSOR_NUMBER) >= 2 or\
+            len(checkpoints) < memory['num_checkpoints'] or\
+            checkpoints[-1] != START_SENSOR_NUMBER:
         return False # race not finished
 
     start_timestamp = None
@@ -119,7 +130,9 @@ async def handle_race_logic() -> bool:
             continue
 
         # end logic
-        if race_started_flag and int(row[1]) == START_SENSOR_NUMBER:
+        if race_started_flag and\
+                int(row[1]) == START_SENSOR_NUMBER\
+                and current_checkpoint_number == memory['num_checkpoints'] -1:
             memory["lap_time"] = (datetime.fromisoformat(row[0]) - start_timestamp).total_seconds()
             memory['in_progress'] = False
             await add_reading_to_race(["lap_time", memory["lap_time"]])
@@ -167,5 +180,5 @@ async def write_memory(data: dict) -> None:
         json.dump(data, f)
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=80)
+    uvicorn.run(app, host="0.0.0.0", port=8890)
 
