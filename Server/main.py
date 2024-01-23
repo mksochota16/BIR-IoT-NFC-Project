@@ -6,16 +6,21 @@ from datetime import datetime
 import fastapi
 import uvicorn as uvicorn
 from fastapi import FastAPI
+from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 
 from starlette.middleware.cors import CORSMiddleware
+CERT_FILE = ""
+KEY_FILE = ""
 
 app = FastAPI()
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Adjust this to restrict origins if needed
     allow_methods=["*"],  # Adjust this to restrict HTTP methods if needed
     allow_headers=["*"],  # Adjust this to restrict headers if needed
 )
+app.add_middleware(HTTPSRedirectMiddleware)
 START_SENSOR_NUMBER = 0
 
 @app.get("/race-time")
@@ -180,5 +185,5 @@ async def write_memory(data: dict) -> None:
         json.dump(data, f)
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8890)
+    uvicorn.run(app, host="0.0.0.0", port=8890, ssl_keyfile=KEY_FILE, ssl_certfile=CERT_FILE)
 
