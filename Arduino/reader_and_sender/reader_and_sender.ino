@@ -21,7 +21,7 @@ int status = WL_IDLE_STATUS;
 IPAddress server_ip(192,168,222,86);  // numeric IP
 int server_port = 80; // port 80 is the default for HTTP
 
-WiFiClient client;
+WiFiSSLClient client;
 
 void setup() {
   //Initialize serial and wait for port to open:
@@ -96,7 +96,7 @@ void read_response() {
 
 
 void post_request() {
-  while (!client.connect(server_ip, server_port)) {
+  while (!client.connectSSL(server_ip, server_port)) {
     Serial.println("Connection failed, trying again...");
     delay(100);
   }
