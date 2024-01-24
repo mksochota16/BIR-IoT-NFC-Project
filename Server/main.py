@@ -26,11 +26,10 @@ START_SENSOR_NUMBER = 0
 @app.get("/race-time")
 async def race_time(race_number: Optional[int] = None):
     memory = await get_memory()
-    if memory["in_progress"]:
-        raise fastapi.HTTPException(status_code=400,
-                                    detail=f"Race number {memory['current_race_number']} is still in progress")
-
     if race_number is None:
+        if memory["in_progress"]:
+            raise fastapi.HTTPException(status_code=400,
+                                        detail=f"Race number {memory['current_race_number']} is still in progress")
         return {"lap_time": memory["lap_time"]}
     else:
         try:
@@ -41,7 +40,7 @@ async def race_time(race_number: Optional[int] = None):
             return {"lap_time": lap_time_row[1]}
         except FileNotFoundError:
             raise fastapi.HTTPException(status_code=400,
-                                        detail=f"Race number {memory['current_race_number']} does not exist")
+                                        detail=f"Race number {race_number} does not exist")
 
 
 
